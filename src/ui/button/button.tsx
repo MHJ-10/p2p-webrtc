@@ -2,7 +2,7 @@ import type { ButtonProps } from "./interface";
 import { buttonVariants } from "./styles";
 
 const Button = (props: ButtonProps) => {
-  const { children, variant, size, className } = props;
+  const { children, variant, size, className, ...rest } = props;
   return (
     <button
       className={`${buttonVariants({
@@ -10,6 +10,7 @@ const Button = (props: ButtonProps) => {
         size,
         className,
       })}`}
+      {...rest}
     >
       {children}
     </button>
