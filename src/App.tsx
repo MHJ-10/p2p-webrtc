@@ -1,11 +1,13 @@
-import { Button } from "./ui";
+import { Avatar, Button } from "@/ui";
 
 function App() {
   return (
-    <div className="p-20">
+    <div className="flex flex-col gap-20 p-20">
       <Button variant="primary" size="sm">
         Button
       </Button>
+
+      <Avatar size="lg" name="Ali" />
     </div>
   );
 }
