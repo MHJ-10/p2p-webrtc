@@ -1,7 +1,7 @@
 import type { ButtonProps } from "./interface";
 import { buttonVariants } from "./styles";
 
-export const Button = (props: ButtonProps) => {
+const Button = (props: ButtonProps) => {
   const { children, variant, size, className } = props;
   return (
     <button
@@ -15,3 +15,5 @@ export const Button = (props: ButtonProps) => {
     </button>
   );
 };
+
+export default Button;
