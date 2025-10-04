@@ -1,26 +1,25 @@
-import { ControlItem, VideoCell } from "@/ui";
 import {
   DoorOpen,
   MessageCircle,
   Mic,
+  MicOff,
   Monitor,
   Video,
   VideoOff,
 } from "lucide-react";
 import { useReducer } from "react";
-import { videoCallReducer } from "./reducers/videoCallReducer";
+
+import { initialValue, videoCallReducer } from "@/reducers";
+import { ControlItem, VideoCell } from "@/ui";
 
 function App() {
-  const [state, dispatch] = useReducer(videoCallReducer, {
-    userMedia: { active: false, media: null },
-    chats: { show: false },
-    displayMedia: { active: false, media: null },
-  });
+  const [state, dispatch] = useReducer(videoCallReducer, initialValue);
 
-  const isCameraActive = state.userMedia.active;
+  const isVideoActive = state.videoMedia.active;
+  const isAudioActive = state.audioMedia.active;
 
   const onToolbarButtonClick = () => {
-    console.log("test");
+    console.log("clicked");
   };
 
   return (
@@ -29,11 +28,11 @@ function App() {
         <div className="col-span-1">
           <VideoCell
             displayName="Mohammad Hossein"
-            srcObject={state.userMedia.media}
+            srcObject={state.videoMedia.media}
           />
         </div>
         <div className="col-span-1">
-          <VideoCell displayName="Reza" srcObject={state.userMedia.media} />
+          <VideoCell displayName="Reza" srcObject={state.videoMedia.media} />
         </div>
       </div>
       <div className="absolute bottom-3 flex w-full flex-row items-center justify-center gap-4">
@@ -50,14 +49,26 @@ function App() {
               },
             });
           }}
-          icon={isCameraActive ? <VideoOff /> : <Video />}
+          icon={isVideoActive ? <VideoOff /> : <Video />}
           label="Cam"
-          invented={isCameraActive}
+          invented={isVideoActive}
         />
         <ControlItem
-          onClick={onToolbarButtonClick}
-          icon={<Mic />}
+          onClick={async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              audio: true,
+            });
+
+            dispatch({
+              type: "microphoneShare",
+              payload: {
+                stream,
+              },
+            });
+          }}
+          icon={isAudioActive ? <MicOff /> : <Mic />}
           label="Mic"
+          invented={isAudioActive}
         />
         <ControlItem
           onClick={onToolbarButtonClick}

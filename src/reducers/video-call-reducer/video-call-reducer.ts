@@ -1,47 +1,4 @@
-interface MediaStreamState {
-  media: MediaProvider | null;
-  active: boolean;
-}
-
-interface Chat {
-  id: string;
-  name?: string;
-  message: string;
-}
-
-interface ChatState {
-  converstations?: Chat[];
-  show: boolean;
-}
-
-export type VideoCallEvents =
-  | {
-      type: "cameraShare";
-      payload: { stream: MediaProvider };
-    }
-  | {
-      type: "microphoneShare";
-      payload: { stream: MediaProvider };
-    }
-  | {
-      type: "screenShare";
-      payload: { stream: MediaProvider };
-    }
-  | {
-      type: "chat";
-      payload: { chats: ChatState };
-    }
-  | {
-      type: "leaveRoom";
-    };
-
-type VideoCallState = {
-  userMedia: MediaStreamState;
-  displayMedia: MediaStreamState;
-  chats: ChatState;
-};
-
-export type ActionType = VideoCallEvents["type"];
+import type { VideoCallEvents, VideoCallState } from "./interace";
 
 export const videoCallReducer = (
   state: VideoCallState,
@@ -51,7 +8,7 @@ export const videoCallReducer = (
     case "cameraShare":
       return {
         ...state,
-        userMedia: state.userMedia.active
+        videoMedia: state.videoMedia.active
           ? {
               active: false,
               media: null,
@@ -64,7 +21,7 @@ export const videoCallReducer = (
     case "microphoneShare":
       return {
         ...state,
-        userMedia: state.userMedia.active
+        audioMedia: state.audioMedia.active
           ? {
               active: false,
               media: null,

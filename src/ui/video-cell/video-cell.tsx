@@ -19,7 +19,7 @@ const VideoCell = (props: VideoCellProps) => {
   }, [srcObject]);
 
   return (
-    <div className="relative max-h-[390px] w-full rounded-lg border-red-500">
+    <div className="relative  w-full rounded-lg border-red-500">
       {srcObject ? (
         <video
           className="size-full rounded-lg"
