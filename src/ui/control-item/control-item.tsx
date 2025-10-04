@@ -16,7 +16,7 @@ const ControlItem = (props: ControlItemProps) => {
         {icon}
       </button>
       {!!label && (
-        <p className="max-w-16 truncate text-sm font-medium text-neutral-700">
+        <p className="max-w-16 truncate text-sm font-medium text-neutral-100">
           {label}
         </p>
       )}

@@ -1,28 +1,80 @@
-import { Button, VideoCell } from "@/ui";
-import { useRef } from "react";
+import { ControlItem, VideoCell } from "@/ui";
+import {
+  DoorOpen,
+  MessageCircle,
+  Mic,
+  Monitor,
+  Video,
+  VideoOff,
+} from "lucide-react";
+import { useReducer } from "react";
+import { videoCallReducer } from "./reducers/videoCallReducer";
 
 function App() {
-  const ownVideoRef = useRef<HTMLVideoElement>(null);
+  const [state, dispatch] = useReducer(videoCallReducer, {
+    userMedia: { active: false, media: null },
+    chats: { show: false },
+    displayMedia: { active: false, media: null },
+  });
 
-  const onVideoStream = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    if (ownVideoRef.current) {
-      ownVideoRef.current.srcObject = stream;
-    }
+  const isCameraActive = state.userMedia.active;
+
+  const onToolbarButtonClick = () => {
+    console.log("test");
   };
 
   return (
-    <div className="flex flex-col gap-20 p-20 font-inter">
-      <Button size="lg" onClick={onVideoStream}>
-        Share Own Webcam
-      </Button>
-      <div className="grid grid-cols-2 gap-4">
+    <div className="relative flex h-screen flex-col items-center justify-center gap-20 bg-neutral-800 font-inter">
+      <div className="grid w-full grid-cols-1 gap-4 px-4 lg:grid-cols-2">
         <div className="col-span-1">
-          <VideoCell displayName="Mohammad Hossein" ref={ownVideoRef} />
+          <VideoCell
+            displayName="Mohammad Hossein"
+            srcObject={state.userMedia.media}
+          />
         </div>
         <div className="col-span-1">
-          <VideoCell displayName="Reza" />
+          <VideoCell displayName="Reza" srcObject={state.userMedia.media} />
         </div>
+      </div>
+      <div className="absolute bottom-3 flex w-full flex-row items-center justify-center gap-4">
+        <ControlItem
+          onClick={async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+            });
+
+            dispatch({
+              type: "cameraShare",
+              payload: {
+                stream,
+              },
+            });
+          }}
+          icon={isCameraActive ? <VideoOff /> : <Video />}
+          label="Cam"
+          invented={isCameraActive}
+        />
+        <ControlItem
+          onClick={onToolbarButtonClick}
+          icon={<Mic />}
+          label="Mic"
+        />
+        <ControlItem
+          onClick={onToolbarButtonClick}
+          icon={<Monitor />}
+          label="Share"
+        />
+        <ControlItem
+          onClick={onToolbarButtonClick}
+          icon={<MessageCircle />}
+          label="Chat"
+        />
+        <ControlItem
+          onClick={onToolbarButtonClick}
+          icon={<DoorOpen />}
+          label="Leave"
+          invented
+        />
       </div>
     </div>
   );
