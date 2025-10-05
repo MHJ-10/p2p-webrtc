@@ -8,7 +8,7 @@ const ControlItem = (props: ControlItemProps) => {
     <div className="x relative flex w-fit flex-col items-center gap-1">
       <button
         className={clsx(
-          "flex size-12 items-center justify-center rounded-xl bg-neutral-900 [&>svg]:!size-6 [&>svg]:stroke-2 [&>svg]:!text-neutral-100",
+          "flex size-12 items-center justify-center rounded-xl bg-neutral-900 transition-colors [&>svg]:!size-6 [&>svg]:stroke-2 [&>svg]:!text-neutral-100",
           { "!bg-feedback-800": invented },
         )}
         onClick={onClick}
