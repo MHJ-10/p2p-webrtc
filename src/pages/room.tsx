@@ -1,8 +1,8 @@
+import { Toolbar } from "@/components";
 import { useVideoCall } from "@/hooks";
 import { VideoCell } from "@/ui";
-import { Toolbar } from "@/components";
 
-const CallRoom = () => {
+const RoomPage = () => {
   const { state } = useVideoCall();
 
   return (
@@ -25,4 +25,4 @@ const CallRoom = () => {
   );
 };
 
-export default CallRoom;
+export default RoomPage;
