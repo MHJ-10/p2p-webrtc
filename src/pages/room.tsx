@@ -1,9 +1,26 @@
 import { Toolbar } from "@/components";
 import { useVideoCall } from "@/hooks";
+import { checkRoomExist } from "@/services";
 import { VideoCell } from "@/ui";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router";
 
 const RoomPage = () => {
+  const { roomId } = useParams();
   const { state } = useVideoCall();
+  const navigate = useNavigate();
+
+  const checkRoomId = async () => {
+    try {
+      await checkRoomExist(roomId!);
+    } catch (err) {
+      if (err) navigate("/");
+    }
+  };
+
+  useEffect(() => {
+    checkRoomId();
+  }, []);
 
   return (
     <div className="relative flex h-screen flex-col items-center justify-center gap-20 bg-neutral-800 font-inter">

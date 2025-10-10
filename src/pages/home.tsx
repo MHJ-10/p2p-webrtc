@@ -1,23 +1,65 @@
-import { Button } from "@/ui";
+import { createRoom } from "@/services";
+import { Button, Input } from "@/ui";
 import { Video } from "lucide-react";
-import MeetImage from "@/assets/meet.png";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 
 const HomePage = () => {
+  const navigate = useNavigate();
+
+  const [roomId, setRoomId] = useState("");
+
+  const onCreateRoom = async () => {
+    try {
+      const res = await createRoom();
+      const generatedRoomId = res.data.roomId;
+      navigate(`/room/${generatedRoomId}`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const joinRoom = () => {
+    navigate(`/room/${roomId.trim()}`);
+  };
+
   return (
-    <div className="flex h-screen items-center justify-center font-inter">
-      <form className="grid h-[500px] w-3/4 grid-cols-5 gap-4 rounded-lg border-2 border-brand-300">
-        <div className="col-span-2 flex items-center justify-center">
-          <img className="drop-shadow-brand-500" src={MeetImage} alt="meet" />
+    <div className="flex h-screen bg-neutral-700/30 items-center justify-center font-inter">
+      <div className="grid h-[500px] w-3/4 grid-cols-1 rounded-lg border-2 border-brand-300 md:grid-cols-5">
+        <div className="flex h-full items-center justify-center md:col-span-2">
+          <p className="animate-pulse bg-linear-to-r from-brand-300 to-brand-700 bg-clip-text text-center text-3xl font-bold text-transparent md:text-4xl lg:text-6xl">
+            P2P Video Call
+          </p>
         </div>
 
-        <div className="col-span-3 flex flex-col items-center justify-center gap-6 rounded-r-lg bg-brand-200/50">
-          <p className="text-5xl font-bold text-neutral-800">Video Call</p>
-          <Button className="flex items-center justify-center gap-4" size="lg">
+        <div className="flex flex-col items-center justify-center gap-6 bg-brand-300/40 px-8 py-16 md:col-span-3 md:rounded-r-lg md:px-12 md:py-0 lg:px-16 xl:px-20">
+          <Button
+            className="flex w-full items-center justify-center gap-4"
+            size="lg"
+            onClick={onCreateRoom}
+          >
             <Video className="size-8" />
             <span>New Meeting </span>
           </Button>
+          <div className="flex w-full flex-col gap-2 lg:flex-row">
+            <Input
+              size="full"
+              value={roomId}
+              onChange={(e) => setRoomId(e.target.value)}
+              placeholder="Enter the room id"
+            />
+            <Button
+              size="lg"
+              className="w-full lg:w-60"
+              variant="secondary"
+              disabled={!roomId.trim()}
+              onClick={joinRoom}
+            >
+              Join
+            </Button>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 };
