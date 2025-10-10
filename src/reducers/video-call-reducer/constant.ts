@@ -16,4 +16,5 @@ export const initialValue: VideoCallState = {
   chats: {
     show: false,
   },
+  users: [],
 };

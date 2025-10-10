@@ -2,13 +2,16 @@ import { Toolbar } from "@/components";
 import { useVideoCall } from "@/hooks";
 import { checkRoomExist } from "@/services";
 import { VideoCell } from "@/ui";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 
 const RoomPage = () => {
   const { roomId } = useParams();
-  const { state } = useVideoCall();
+  const { state, dispatch } = useVideoCall();
   const navigate = useNavigate();
+
+  const socketRef = useRef<WebSocket>(null);
+  const connectionRef = useRef<RTCPeerConnection | null>(null);
 
   const checkRoomId = async () => {
     try {
@@ -20,6 +23,50 @@ const RoomPage = () => {
 
   useEffect(() => {
     checkRoomId();
+  }, []);
+
+  const createOffer = async (pc: RTCPeerConnection) => {
+    const offer = await pc.createOffer();
+    pc.setLocalDescription(offer);
+  };
+
+  useEffect(() => {
+    connectionRef.current = new RTCPeerConnection();
+    const pc = connectionRef.current;
+    createOffer(pc);
+  }, []);
+
+  useEffect(() => {
+    socketRef.current = new WebSocket("ws://localhost:3001");
+
+    const sokcet = socketRef.current;
+
+    sokcet.onopen = () => {
+      sokcet.send(JSON.stringify({ type: "join-room", roomId }));
+    };
+
+    sokcet.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "joined-room") {
+        dispatch({
+          type: "addUser",
+          payload: {
+            user: {
+              name: data.isInitiator ? "One" : "Two",
+              isInitiator: data.isInitiator,
+              sdp: connectionRef.current?.localDescription,
+            },
+          },
+        });
+      }
+    };
+
+    return () => {
+      if (sokcet) {
+        sokcet.close();
+      }
+    };
   }, []);
 
   return (

@@ -45,7 +45,15 @@ export const videoCallReducer = (
             },
       };
     case "chat":
-      return { ...state, chats: action.payload.chats };
+      return {
+        ...state,
+        chats: action.payload.chats,
+      };
+    case "addUser":
+      return {
+        ...state,
+        users: [...state.users, action.payload.user],
+      };
     case "leaveRoom":
       return state;
   }

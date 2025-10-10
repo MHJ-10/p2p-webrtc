@@ -14,6 +14,13 @@ interface ChatState {
   show: boolean;
 }
 
+interface User {
+  name: string;
+  isInitiator: boolean;
+  sdp?: RTCSessionDescriptionInit | null;
+  candidate?: RTCIceCandidate | null;
+}
+
 export type VideoCallEvents =
   | {
       type: "cameraShare";
@@ -32,6 +39,10 @@ export type VideoCallEvents =
       payload: { chats: ChatState };
     }
   | {
+      type: "addUser";
+      payload: { user: User };
+    }
+  | {
       type: "leaveRoom";
     };
 
@@ -40,4 +51,5 @@ export interface VideoCallState {
   audioMedia: MediaStreamState;
   displayMedia: MediaStreamState;
   chats: ChatState;
+  users: User[];
 }
