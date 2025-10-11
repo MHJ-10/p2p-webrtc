@@ -60,6 +60,7 @@ wss.on("connection", (ws) => {
       }
 
       room.clients.add(ws);
+
       currentRoomId = roomId;
       ws.send(
         JSON.stringify({

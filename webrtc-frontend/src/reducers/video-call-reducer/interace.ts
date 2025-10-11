@@ -1,5 +1,5 @@
 interface MediaStreamState {
-  media: MediaProvider | null;
+  media: MediaStream | null;
   active: boolean;
 }
 
@@ -24,15 +24,15 @@ interface User {
 export type VideoCallEvents =
   | {
       type: "cameraShare";
-      payload: { stream: MediaProvider };
+      payload: { stream: MediaStream };
     }
   | {
       type: "microphoneShare";
-      payload: { stream: MediaProvider };
+      payload: { stream: MediaStream };
     }
   | {
       type: "screenShare";
-      payload: { stream: MediaProvider };
+      payload: { stream: MediaStream };
     }
   | {
       type: "chat";
