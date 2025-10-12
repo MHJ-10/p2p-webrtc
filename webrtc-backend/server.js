@@ -1,117 +1,97 @@
+// server.js
 const express = require("express");
-const http = require("http");
-const { WebSocketServer } = require("ws");
 const cors = require("cors");
-const helmet = require("helmet");
-const { nanoid } = require("nanoid");
+const crypto = require("crypto");
 
-// ===== Express REST API =====
 const app = express();
-app.use(express.json());
 app.use(cors());
-app.use(helmet());
+app.use(express.json());
 
-const server = http.createServer(app);
+// === In-memory storage ===
+// key = roomId, value = array of users (max 2)
+const rooms = new Map(); // Map<string, User[]>
 
-// ===== In-memory rooms =====
-// roomId -> { clients: Set<WebSocket>, createdAt: number }
-const rooms = new Map();
+// util to generate random IDs
+function generateId() {
+  return crypto.randomUUID();
+}
 
-// Create room
-app.post("/api/rooms", (req, res) => {
-  const roomId = crypto.randomUUID();
-  rooms.set(roomId, { clients: new Set(), createdAt: Date.now() });
-  console.log(`Room created: ${roomId}`);
-  res.json({ roomId });
+// simple root route to check server
+app.get("/", (req, res) => {
+  res.send("WebRTC backend server is running ✅");
 });
 
-// Check room
-app.get("/api/rooms/:roomId", (req, res) => {
-  const roomId = req.params.roomId;
-  const room = rooms.get(roomId);
-  if (!room) return res.status(404).json({ exists: false });
-  res.json({ exists: true, clientsCount: room.clients.size });
-});
+// === CREATE ROOM ===
+app.post("/create-room", (req, res) => {
+  const { user } = req.body;
 
-// ===== WebSocket server =====
-const wss = new WebSocketServer({ server });
-console.log("WebSocket server running on same port as REST API");
-
-wss.on("connection", (ws) => {
-  console.log("Client connected");
-
-  // Track the room of this socket
-  let currentRoomId = null;
-
-  ws.on("message", (data) => {
-    const message = JSON.parse(data.toString());
-
-    // Join room
-    if (message.type === "join-room") {
-      const roomId = message.roomId;
-      const room = rooms.get(roomId);
-      if (!room) {
-        ws.send(JSON.stringify({ type: "error", reason: "room-not-found" }));
-        return;
-      }
-      if (room.clients.size >= 2) {
-        ws.send(JSON.stringify({ type: "error", reason: "room-full" }));
-        return;
-      }
-
-      room.clients.add(ws);
-
-      currentRoomId = roomId;
-      ws.send(
-        JSON.stringify({
-          type: "joined-room",
-          isInitiator: room.clients.size === 1,
-        })
-      );
-      console.log(`Client joined room ${roomId}`);
-    }
-
-    // Forward signaling messages
-    if (message.type === "signal") {
-      const roomId = message.roomId;
-      const payload = message.payload;
-      const room = rooms.get(roomId);
-      if (!room) return;
-      room.clients.forEach((peer) => {
-        if (peer !== ws) peer.send(JSON.stringify({ type: "signal", payload }));
-      });
-    }
-
-    // Leave room voluntarily
-    if (message.type === "leave-room") {
-      leaveRoom(ws);
-    }
-  });
-
-  ws.on("close", () => {
-    console.log("Client disconnected");
-    leaveRoom(ws);
-  });
-
-  function leaveRoom(socket) {
-    if (!currentRoomId) return;
-    const room = rooms.get(currentRoomId);
-    if (!room) return;
-
-    room.clients.delete(socket);
-    room.clients.forEach((peer) =>
-      peer.send(JSON.stringify({ type: "peer-left" }))
-    );
-
-    if (room.clients.size === 0) {
-      rooms.delete(currentRoomId);
-      console.log(`Room deleted: ${currentRoomId}`);
-    }
-
-    currentRoomId = null;
+  // validate input
+  if (!user || !user.id || !user.name) {
+    return res
+      .status(400)
+      .json({ success: false, message: "invalid user data" });
   }
+
+  const roomId = generateId();
+
+  // save new room with this user
+  rooms.set(roomId, [user]);
+
+  console.log(`Room created: ${roomId} by ${user.name}`);
+
+  res.json({ success: true, roomId });
 });
 
-// ===== Start server =====
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// === JOIN ROOM ===
+app.post("/join-room", (req, res) => {
+  const { roomId, user } = req.body;
+
+  // validation
+  if (!roomId || !user || !user.id || !user.name) {
+    return res.status(400).json({ success: false, message: "invalid payload" });
+  }
+
+  const room = rooms.get(roomId);
+
+  if (!room) {
+    return res.json({ success: false, message: "room not exist" });
+  }
+
+  // check if user already in room
+  const existingUser = room.find((u) => u.id === user.id);
+  if (existingUser) {
+    return res.json({ success: true });
+  }
+
+  // check if room full
+  if (room.length >= 2) {
+    return res.json({ success: false, message: "room is filled" });
+  }
+
+  // add user to room
+  room.push(user);
+  rooms.set(roomId, room);
+
+  console.log(`User ${user.name} joined room ${roomId}`);
+  return res.json({ success: true });
+});
+
+// === GET ALL ROOMS (for debugging) ===
+app.get("/rooms", (req, res) => {
+  const allRooms = [];
+
+  for (const [roomId, users] of rooms.entries()) {
+    allRooms.push({
+      roomId,
+      users,
+    });
+  }
+
+  res.json(allRooms);
+});
+
+// start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
