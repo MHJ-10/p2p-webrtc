@@ -1,14 +1,23 @@
-interface CreateRoomResponse {
-  roomId: string;
+export interface User {
+  id: string;
+  name: string;
 }
 
-type CheckRoomExistResponse =
-  | {
-      exists: false;
-    }
-  | {
-      exists: true;
-      clients: number;
-    };
+export interface CreateRoomPayload {
+  user: User;
+}
 
-export type { CheckRoomExistResponse, CreateRoomResponse };
+export interface CreateRoomResponse {
+  roomId: string;
+  success: boolean;
+}
+
+export interface JoinRoomPayload {
+  roomId: string;
+  user: User;
+}
+
+export interface JoinRoomResponse {
+  success: boolean;
+  message?: string;
+}

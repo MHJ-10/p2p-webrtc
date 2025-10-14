@@ -1,4 +1,4 @@
-import { createRoom } from "@/services";
+import { createRoom, joinRoom } from "@/services";
 import { Button, Input } from "@/ui";
 import { Video } from "lucide-react";
 import { useState } from "react";
@@ -9,13 +9,15 @@ const HomePage = () => {
 
   const [roomId, setRoomId] = useState("");
   const [info, setInfo] = useState<{ name: string; saved: boolean }>({
-    name: JSON.parse(localStorage.getItem("user")!).name,
+    name: "",
     saved: false,
   });
 
+  const user = JSON.parse(sessionStorage.getItem("user")!);
+
   const onCreateRoom = async () => {
     try {
-      const res = await createRoom();
+      const res = await createRoom({ user });
       const generatedRoomId = res.data.roomId;
       navigate(`/room/${generatedRoomId}`);
     } catch (error) {
@@ -23,14 +25,22 @@ const HomePage = () => {
     }
   };
 
-  const joinRoom = () => {
-    navigate(`/room/${roomId.trim()}`);
+  const onJoinRoom = async () => {
+    try {
+      const res = await joinRoom({
+        user,
+        roomId: roomId.trim(),
+      });
+      if (res.data.success) navigate(`/room/${roomId.trim()}`);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const saveUser = () => {
     setInfo((prev) => ({ ...prev, saved: true }));
     const user = { name: info.name, id: crypto.randomUUID() };
-    localStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("user", JSON.stringify(user));
   };
 
   return (
@@ -86,7 +96,7 @@ const HomePage = () => {
               className="w-full lg:w-60"
               variant="secondary"
               disabled={!roomId.trim() || !info.name}
-              onClick={joinRoom}
+              onClick={onJoinRoom}
             >
               Join
             </Button>
