@@ -14,12 +14,13 @@ const VideoCell = (props: VideoCellProps) => {
 
   useEffect(() => {
     if (videoRef.current) {
+      console.log(srcObject);
       videoRef.current.srcObject = srcObject;
     }
   }, [srcObject]);
 
   return (
-    <div className="relative  w-full rounded-lg border-red-500">
+    <div className="relative w-full rounded-lg border-red-500">
       {srcObject ? (
         <video
           className="size-full rounded-lg"

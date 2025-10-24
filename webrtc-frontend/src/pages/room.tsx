@@ -1,4 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import { ControlItem, VideoCell } from "@/ui";
+import {
+  DoorOpen,
+  Mic,
+  MicOff,
+  Monitor,
+  MonitorOff,
+  Video,
+  VideoOff,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 
 const RoomPage = () => {
@@ -6,154 +16,213 @@ const RoomPage = () => {
   const socketRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
+  const [status, setStatus] = useState<{
+    video?: boolean;
+    audio?: boolean;
+    screen?: boolean;
+  }>();
+
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-
   const user = JSON.parse(sessionStorage.getItem("user")!);
 
-  // send message via WebSocket
-  const sendMessage = (msg: any) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(msg));
-    }
-  };
-
-  // start WebRTC
-  const startWebRTC = async (isInitiator: boolean) => {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-    pcRef.current = pc;
-
-    // ICE candidates
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        sendMessage({ type: "candidate", data: event.candidate });
-      }
-    };
-
-    // remote track
-    pc.ontrack = (event) => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
-    };
-
-    // local stream
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    setLocalStream(stream);
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
-    }
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-    if (isInitiator) {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      sendMessage({ type: "offer", data: offer });
-    }
-  };
-
-  // handle offer from peer
-  const handleOffer = async (offer: RTCSessionDescriptionInit) => {
-    if (!pcRef.current) await startWebRTC(false);
-    await pcRef.current!.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await pcRef.current!.createAnswer();
-    await pcRef.current!.setLocalDescription(answer);
-    sendMessage({ type: "answer", data: answer });
-  };
-
-  // handle answer from peer
-  const handleAnswer = async (answer: RTCSessionDescriptionInit) => {
-    if (!pcRef.current) return;
-    await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-  };
-
-  // handle ICE candidate from peer
-  const handleCandidate = async (candidate: RTCIceCandidateInit) => {
-    if (!pcRef.current) return;
-    await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-  };
-
   useEffect(() => {
-    // connect WebSocket
-    const socket = new WebSocket("ws://localhost:3000");
-    socketRef.current = socket;
+    socketRef.current = new WebSocket("ws://localhost:3000/");
+    pcRef.current = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: ["stun:stun.l.google.com:19302"],
+        },
+      ],
+    });
+    const socket = socketRef.current;
+    const connection = pcRef.current;
+
+    connection.ontrack = (event) => {
+      const remoteStream = event.streams[0] || new MediaStream([event.track]);
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
+    };
+
+    connection.onicecandidate = async (e) => {
+      if (e.candidate) {
+        socket.send(
+          JSON.stringify({
+            type: "candidate",
+            userId: user.id,
+            roomId,
+            payload: e.candidate,
+          }),
+        );
+      }
+    };
 
     socket.onopen = () => {
-      console.log("✅ Connected to WebSocket");
-      sendMessage({ type: "join", roomId, user });
+      socket.send(
+        JSON.stringify({
+          type: "join",
+          roomId: roomId || "",
+          userId: user.id,
+        }),
+      );
     };
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("📩 WS message:", data);
+    socket.onmessage = async (event) => {
+      const message = JSON.parse(event.data);
 
-      switch (data.type) {
-        case "waiting":
-          console.log("⏳ Waiting for peer...");
-          break;
-
-        case "peer-joined":
-          console.log("👥 Peer joined");
-
-          // only the first user (initiator) should start the offer
-          if (data.initiatorId === user.id) {
-            startWebRTC(true);
+      switch (message.type) {
+        case "ready":
+          if (message.number === 1) {
+            return;
+          } else if (message.number === 2) {
+            const offer = await connection.createOffer();
+            connection.setLocalDescription(offer);
+            socket.send(
+              JSON.stringify({
+                type: "offer",
+                roomId,
+                userId: user.id,
+                payload: offer,
+              }),
+            );
           }
           break;
-
         case "offer":
-          handleOffer(data.data);
+          {
+            await connection.setRemoteDescription(message.payload);
+            const answer = await connection.createAnswer();
+            connection.setLocalDescription(answer);
+            socket.send(
+              JSON.stringify({
+                type: "answer",
+                roomId,
+                userId: user.id,
+                payload: answer,
+              }),
+            );
+          }
           break;
-
         case "answer":
-          handleAnswer(data.data);
+          {
+            await connection.setRemoteDescription(message.payload);
+          }
           break;
-
-        case "candidate":
-          handleCandidate(data.data);
+        case "candidate": {
+          try {
+            if (message.payload) {
+              await connection.addIceCandidate(
+                new RTCIceCandidate(message.payload),
+              );
+            }
+          } catch (err) {
+            console.error("❌ Error adding received ICE candidate", err);
+          }
           break;
-
-        default:
-          console.log("⚠️ Unknown message", data);
+        }
       }
     };
-
-    socket.onclose = () => console.log("❌ WebSocket disconnected");
 
     return () => {
       socket.close();
+      connection.close();
     };
-  }, [roomId, user]);
+  }, []);
+
+  const shareVideo = async () => {
+    if (status?.video) {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+        setStatus((prev) => ({ ...prev, video: false }));
+      }
+    } else {
+      if (pcRef.current) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+        stream.getTracks().forEach((t) => pcRef.current!.addTrack(t, stream));
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        setStatus((prev) => ({ ...prev, video: true }));
+
+        const offer = await pcRef.current.createOffer();
+        await pcRef.current.setLocalDescription(offer);
+        socketRef.current?.send(
+          JSON.stringify({
+            type: "offer",
+            roomId,
+            userId: user.id,
+            payload: offer,
+          }),
+        );
+      }
+    }
+  };
+
+  const shareScreen = async () => {
+    if (status?.screen) {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+        setStatus((prev) => ({ ...prev, screen: false }));
+      }
+    } else {
+      if (pcRef.current) {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+        });
+        stream.getTracks().forEach((t) => pcRef.current!.addTrack(t, stream));
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        setStatus((prev) => ({ ...prev, screen: true }));
+
+        const offer = await pcRef.current.createOffer();
+        await pcRef.current.setLocalDescription(offer);
+        socketRef.current?.send(
+          JSON.stringify({
+            type: "offer",
+            roomId,
+            userId: user.id,
+            payload: offer,
+          }),
+        );
+      }
+    }
+  };
 
   return (
     <div className="flex h-screen w-full items-center justify-center gap-4 bg-neutral-800 p-4 text-white">
-      {/* Local video */}
-      <div className="flex flex-col items-center">
-        <h2 className="mb-2">You</h2>
-        <video
-          ref={localVideoRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-64 rounded-lg border-2 border-brand-300"
-        />
-      </div>
+      <VideoCell
+        displayName="Local"
+        srcObject={localVideoRef.current?.srcObject || null}
+      />
+      <VideoCell
+        displayName="Remote"
+        srcObject={remoteVideoRef.current?.srcObject || null}
+      />
 
-      {/* Remote video */}
-      <div className="flex flex-col items-center">
-        <h2 className="mb-2">Peer</h2>
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="w-64 rounded-lg border-2 border-brand-300"
+      <div className="fixed bottom-5 flex gap-4">
+        <ControlItem
+          icon={status?.video ? <Video /> : <VideoOff />}
+          invented={!status?.video}
+          label="Cam"
+          onClick={shareVideo}
+        />
+        <ControlItem
+          icon={status?.video ? <Mic /> : <MicOff />}
+          invented={!status?.audio}
+          label="Audio"
+          onClick={() => console.log("first")}
+        />
+        <ControlItem
+          icon={status?.screen ? <Monitor /> : <MonitorOff />}
+          invented={!status?.screen}
+          label="Screen"
+          onClick={shareScreen}
+        />
+        <ControlItem
+          icon={<DoorOpen />}
+          invented
+          label="Leave"
+          onClick={() => console.log("first")}
         />
       </div>
     </div>
