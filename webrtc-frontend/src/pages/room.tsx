@@ -1,4 +1,4 @@
-import { ControlItem, VideoCell } from "@/ui";
+import { ControlItem } from "@/ui";
 import {
   DoorOpen,
   Mic,
@@ -128,7 +128,7 @@ const RoomPage = () => {
       socket.close();
       connection.close();
     };
-  }, []);
+  }, [roomId, user.id]);
 
   const shareVideo = async () => {
     if (status?.video) {
@@ -141,8 +141,12 @@ const RoomPage = () => {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
         });
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+
         stream.getTracks().forEach((t) => pcRef.current!.addTrack(t, stream));
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
         setStatus((prev) => ({ ...prev, video: true }));
 
         const offer = await pcRef.current.createOffer();
@@ -170,8 +174,12 @@ const RoomPage = () => {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
         });
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+
         stream.getTracks().forEach((t) => pcRef.current!.addTrack(t, stream));
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
         setStatus((prev) => ({ ...prev, screen: true }));
 
         const offer = await pcRef.current.createOffer();
@@ -190,14 +198,22 @@ const RoomPage = () => {
 
   return (
     <div className="flex h-screen w-full items-center justify-center gap-4 bg-neutral-800 p-4 text-white">
-      <VideoCell
-        displayName="Local"
-        srcObject={localVideoRef.current?.srcObject || null}
-      />
-      <VideoCell
-        displayName="Remote"
-        srcObject={remoteVideoRef.current?.srcObject || null}
-      />
+      <div className="grid grid-cols-2">
+        <video
+          className="size-full rounded-lg"
+          width={200}
+          height={200}
+          autoPlay
+          ref={localVideoRef}
+        />
+        <video
+          className="size-full rounded-lg"
+          width={200}
+          height={200}
+          autoPlay
+          ref={remoteVideoRef}
+        />
+      </div>
 
       <div className="fixed bottom-5 flex gap-4">
         <ControlItem
@@ -222,7 +238,10 @@ const RoomPage = () => {
           icon={<DoorOpen />}
           invented
           label="Leave"
-          onClick={() => console.log("first")}
+          onClick={() => {
+            console.log("local", localVideoRef.current?.srcObject);
+            console.log("remote", remoteVideoRef.current?.srcObject);
+          }}
         />
       </div>
     </div>

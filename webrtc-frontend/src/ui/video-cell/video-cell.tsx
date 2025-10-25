@@ -1,33 +1,19 @@
-import React, { useEffect, useRef, type ComponentProps } from "react";
+import { type ComponentProps } from "react";
 
 import BackgroundImage from "@/assets/video-background.png";
 
 interface VideoCellProps extends ComponentProps<"video"> {
   displayName: string;
-  srcObject: MediaProvider | null;
+  isActive: boolean;
 }
 
 const VideoCell = (props: VideoCellProps) => {
-  const { displayName, srcObject, ...rest } = props;
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      console.log(srcObject);
-      videoRef.current.srcObject = srcObject;
-    }
-  }, [srcObject]);
+  const { displayName, isActive, ref, ...rest } = props;
 
   return (
     <div className="relative w-full rounded-lg border-red-500">
-      {srcObject ? (
-        <video
-          className="size-full rounded-lg"
-          ref={videoRef}
-          {...rest}
-          autoPlay
-        />
+      {isActive ? (
+        <video className="size-full rounded-lg" ref={ref} {...rest} autoPlay />
       ) : (
         <img
           src={BackgroundImage}
