@@ -23,7 +23,9 @@ const RoomPage = () => {
   }>();
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localScreenRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteScreenRef = useRef<HTMLVideoElement | null>(null);
 
   const user = JSON.parse(sessionStorage.getItem("user")!);
 
@@ -40,6 +42,7 @@ const RoomPage = () => {
     const connection = pcRef.current;
 
     connection.ontrack = (event) => {
+      console.log(event.track);
       const remoteStream = event.streams[0] || new MediaStream([event.track]);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
@@ -144,8 +147,12 @@ const RoomPage = () => {
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
+        console.log(stream);
 
-        stream.getTracks().forEach((t) => pcRef.current!.addTrack(t, stream));
+        stream.getTracks().forEach((t) => {
+          t.contentHint = "video";
+          pcRef.current!.addTrack(t, stream);
+        });
 
         setStatus((prev) => ({ ...prev, video: true }));
 
@@ -165,8 +172,8 @@ const RoomPage = () => {
 
   const shareScreen = async () => {
     if (status?.screen) {
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null;
+      if (localScreenRef.current) {
+        localScreenRef.current.srcObject = null;
         setStatus((prev) => ({ ...prev, screen: false }));
       }
     } else {
@@ -174,11 +181,15 @@ const RoomPage = () => {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
         });
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
+        if (localScreenRef.current) {
+          localScreenRef.current.srcObject = stream;
         }
+        console.log(stream);
 
-        stream.getTracks().forEach((t) => pcRef.current!.addTrack(t, stream));
+        stream.getTracks().forEach((t) => {
+          t.contentHint = "screen";
+          pcRef.current!.addTrack(t, stream);
+        });
 
         setStatus((prev) => ({ ...prev, screen: true }));
 
@@ -211,7 +222,21 @@ const RoomPage = () => {
           width={200}
           height={200}
           autoPlay
+          ref={localScreenRef}
+        />
+        <video
+          className="size-full rounded-lg"
+          width={200}
+          height={200}
+          autoPlay
           ref={remoteVideoRef}
+        />
+        <video
+          className="size-full rounded-lg"
+          width={200}
+          height={200}
+          autoPlay
+          ref={remoteScreenRef}
         />
       </div>
 
