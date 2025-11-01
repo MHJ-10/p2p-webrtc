@@ -41,11 +41,30 @@ const RoomPage = () => {
     const socket = socketRef.current;
     const connection = pcRef.current;
 
+    connection.onnegotiationneeded = async () => {
+      try {
+        const offer = await connection.createOffer();
+        await connection.setLocalDescription(offer);
+        socket.send(
+          JSON.stringify({
+            type: "offer",
+            roomId,
+            userId: user.id,
+            payload: offer,
+          }),
+        );
+      } catch (err) {
+        console.error("Negotiation error:", err);
+      }
+    };
+
     connection.ontrack = (event) => {
-      console.log(event.track);
-      const remoteStream = event.streams[0] || new MediaStream([event.track]);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
+      const stream = event.streams[0] || new MediaStream([event.track]);
+      const isScreen = event.transceiver.mid === "0";
+      if (isScreen) {
+        remoteScreenRef.current!.srcObject = stream;
+      } else {
+        remoteVideoRef.current!.srcObject = stream;
       }
     };
 
@@ -77,19 +96,18 @@ const RoomPage = () => {
 
       switch (message.type) {
         case "ready":
-          if (message.number === 1) {
-            return;
-          } else if (message.number === 2) {
-            const offer = await connection.createOffer();
-            connection.setLocalDescription(offer);
-            socket.send(
-              JSON.stringify({
-                type: "offer",
-                roomId,
-                userId: user.id,
-                payload: offer,
-              }),
-            );
+          if (message.number === 1) return;
+          else {
+            // const offer = await connection.createOffer();
+            // connection.setLocalDescription(offer);
+            // socket.send(
+            //   JSON.stringify({
+            //     type: "offer",
+            //     roomId,
+            //     userId: user.id,
+            //     payload: offer,
+            //   }),
+            // );
           }
           break;
         case "offer":
@@ -147,25 +165,12 @@ const RoomPage = () => {
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
-        console.log(stream);
-
         stream.getTracks().forEach((t) => {
-          t.contentHint = "video";
+          t.contentHint = "camera";
           pcRef.current!.addTrack(t, stream);
         });
 
         setStatus((prev) => ({ ...prev, video: true }));
-
-        const offer = await pcRef.current.createOffer();
-        await pcRef.current.setLocalDescription(offer);
-        socketRef.current?.send(
-          JSON.stringify({
-            type: "offer",
-            roomId,
-            userId: user.id,
-            payload: offer,
-          }),
-        );
       }
     }
   };
@@ -184,7 +189,6 @@ const RoomPage = () => {
         if (localScreenRef.current) {
           localScreenRef.current.srcObject = stream;
         }
-        console.log(stream);
 
         stream.getTracks().forEach((t) => {
           t.contentHint = "screen";
@@ -192,24 +196,13 @@ const RoomPage = () => {
         });
 
         setStatus((prev) => ({ ...prev, screen: true }));
-
-        const offer = await pcRef.current.createOffer();
-        await pcRef.current.setLocalDescription(offer);
-        socketRef.current?.send(
-          JSON.stringify({
-            type: "offer",
-            roomId,
-            userId: user.id,
-            payload: offer,
-          }),
-        );
       }
     }
   };
 
   return (
     <div className="flex h-screen w-full items-center justify-center gap-4 bg-neutral-800 p-4 text-white">
-      <div className="grid grid-cols-2">
+      <div className="grid grid-cols-2 [&>video]:border [&>video]:border-red-500">
         <video
           className="size-full rounded-lg"
           width={200}
